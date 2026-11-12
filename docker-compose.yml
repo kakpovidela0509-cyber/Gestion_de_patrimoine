@@ -1,0 +1,97 @@
+# Plateforme de gestion du patrimoine immobilier de l'État
+# Lancer : docker compose up -d --build
+name: patrimoine-immobilier
+
+x-laravel-env: &laravel-env
+  APP_ENV: ${APP_ENV:-local}
+  APP_DEBUG: ${APP_DEBUG:-true}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USERNAME: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  JWT_SECRET: ${JWT_SECRET}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: patrimoine-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [patrimoine-net]
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: patrimoine-auth
+    restart: unless-stopped
+    environment:
+      <<: *laravel-env
+      DB_DATABASE: auth_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ["8001:8000"]
+    networks: [patrimoine-net]
+
+  patrimoine-service:
+    build: ./services/patrimoine-service
+    container_name: patrimoine-biens
+    restart: unless-stopped
+    environment:
+      <<: *laravel-env
+      DB_DATABASE: patrimoine_db
+      AUTH_SERVICE_URL: http://auth-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ["8002:8000"]
+    networks: [patrimoine-net]
+
+  inventaire-service:
+    build: ./services/inventaire-service
+    container_name: patrimoine-inventaire
+    restart: unless-stopped
+    environment:
+      <<: *laravel-env
+      DB_DATABASE: inventaire_db
+      AUTH_SERVICE_URL: http://auth-service:8000
+      PATRIMOINE_SERVICE_URL: http://patrimoine-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports: ["8003:8000"]
+    networks: [patrimoine-net]
+
+  gateway:
+    build: ./gateway
+    container_name: patrimoine-gateway
+    restart: unless-stopped
+    environment:
+      <<: *laravel-env
+      DB_DATABASE: gateway_db
+      AUTH_SERVICE_URL: http://auth-service:8000
+      PATRIMOINE_SERVICE_URL: http://patrimoine-service:8000
+      INVENTAIRE_SERVICE_URL: http://inventaire-service:8000
+    depends_on:
+      - auth-service
+      - patrimoine-service
+      - inventaire-service
+    ports: ["8080:8000"]
+    networks: [patrimoine-net]
+
+volumes:
+  pgdata:
+
+networks:
+  patrimoine-net:
+    driver: bridge
