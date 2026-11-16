@@ -2,6 +2,5 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Interface web (page unique)
+Route::get('/', fn () => response()->file(public_path('app.html')));
