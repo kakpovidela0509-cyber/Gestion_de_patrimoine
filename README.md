@@ -311,6 +311,6 @@ Les `Dockerfile` de chaque service et le fichier `docker-compose.yml` permettent
 
 ## 16. Auteure
 
-**KAKPOVI Dela Nadia** : Intégratrice web, étudiante en développement web à l’ADN GOLFE1 (Académie Digitale Numérique), Lomé, Togo.
+**KAKPOVI Dela Nadia** :étudiante en développement web à l’ADN GOLFE1 (Académie Digitale Numérique), Lomé, Togo.
 
 Formateurs : A. Gbadamassi et L. Togba.
